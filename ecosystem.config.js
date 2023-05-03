@@ -1,10 +1,12 @@
 module.exports = {
     apps: [{
         name: "user-service",
-        script: "./user-service/index.js",
+        script: "./index.js",
+        cwd: "./user-service",
     },
     {
         name: "api-gateway",
-        script: "./api-gateway/index.js",
+        script: "./index.js",
+        cwd: "./api-gateway",
     }]
 }
