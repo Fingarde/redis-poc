@@ -46,24 +46,50 @@ async function send(data) {
 // Reply subscription
 sub.subscribe(clientId, (message, channel) => {
     let json = JSON.parse(message);
-    const {  correlationId, data } = json;
+    const {  correlationId, data, error } = json;
 
     const reply = replies[correlationId];
  
     console.log('Received message', json);
     if (reply) {
-        reply(data);
+        reply({ data , error });
     }
 });
 
+app.use(express.json());
 
 app.get('/users', async (req, res) => {
-    const users = await send({ action: 'get-all' });
+    const { data: users, error } = await send({ action: 'get-all' });
+
+    if (error) {
+        res.status(error.status).json(...error.message);
+        return;
+    }
     res.json(users);
 })
 
 app.get('/users/:id', async (req, res) => {
-    const user = await send({ action: 'get', id: req.params.id });
+    const { data: user, error } = await send({ action: 'get', data: { id: req.params.id} });
+
+    if (error) {
+        res.status(error.status).json({message: error.message});
+        return;
+    }
+
+    res.json(user);
+})
+
+
+app.post('/users', async (req, res) => {
+    const newUserData = req.body;
+
+    const { data: user, error } = await send({ action: 'create', data: newUserData });
+
+    if (error) {
+        res.status(error.status).json({message: error.message});
+        return;
+    }
+
     res.json(user);
 })
 

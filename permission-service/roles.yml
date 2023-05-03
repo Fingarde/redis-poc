@@ -1,0 +1,8 @@
+---
+anonymous:
+
+user:
+  - user:get
+
+admin:
+  - user:get-all
