@@ -1,1 +1,1 @@
-# kafka-poc
+# redis-poc

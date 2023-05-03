@@ -1,7 +1,7 @@
 module.exports = {
     apps: [{
         name: "user-service",
-        script: "./user/index.js",
+        script: "./user-service/index.js",
     },
     {
         name: "api-gateway",

@@ -1,72 +1,72 @@
-const express = require('express')
-const { Kafka } = require('kafkajs')
-const { v4: uuidv4 } = require('uuid');
-const app = express()
-const port = 3000
+import { createClient } from 'redis';
+import express from 'express';
+import { v4 as uuid } from 'uuid';
+import dotenv from 'dotenv'
 
-const groupId = `api-gateway`
-const clientId = `${groupId}-${uuidv4()}`
-const responseTopic = `response-${clientId}`
+dotenv.config()
 
-const kafka = new Kafka({
-    clientId: clientId,
-    brokers: ['localhost:9092']
-})
+const app_port = process.env.APP_PORT || 3000;
+const app = express();
 
-const producer = kafka.producer()
-const consumer = kafka.consumer({ groupId: groupId })
+const clientId = process.env.CLIENT_ID || uuid();
+const client = createClient({
+    url: process.env.REDIS_URL,
+    name: clientId
+});
 
-let responses = Object.create(null)
+let replies = Object.create(null);
 
-const init = async () => {
-    await producer.connect()
+client.on('error', err => console.log('Redis Client Error', err));
 
-    await consumer.connect()
-    await consumer.subscribe({ topic: responseTopic })
+await client.connect();
+const sub = client.duplicate();
+await sub.connect();
 
-    consumer.run({
-        eachMessage: async ({ topic, partition, message }) => {
-            const correlationId = message.headers['correlation-id'].toString()
-            const res = responses[correlationId]
-            if (res) {
-                res.send(message.value.toString())
-                delete responses[correlationId]
-            }
-        }
+console.log('Connected to redis');
+console.log('Reply queue is', clientId);
+
+async function send(data) {
+    if (!data.correlationId) {
+        data.correlationId = uuid();
+    }
+    const { correlationId } = data;
+
+    data.replyTo = clientId;
+
+    client.publish('user', JSON.stringify(data));
+
+    const promise = new Promise((resolve) => {
+        replies[correlationId] = resolve;
     })
 
-    // user logger
-    app.use((req, res, next) => {
-        console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`)
-        next()
-    })
-
-    app.get('/users', async (req, res) => {
-        const id = uuidv4();
-        responses[id] = res;
-
-
-        await producer.send({
-            topic: 'user',
-            messages: [
-                {
-                    value: JSON.stringify({
-                        action: 'get-all',
-                    }),
-                    headers: {
-                        'correlation-id': id,
-                        'response-topic': responseTopic
-                    }
-                },
-            ]
-        })
-    })
-    app.listen(port, () => {
-        console.log(`Example app listening on port ${port}`)
-    })
+    return await promise;
 }
 
-init().catch(console.error)
+
+// Reply subscription
+sub.subscribe(clientId, (message, channel) => {
+    let json = JSON.parse(message);
+    const {  correlationId, data } = json;
+
+    const reply = replies[correlationId];
+ 
+    console.log('Received message', json);
+    if (reply) {
+        reply(data);
+    }
+});
 
 
+app.get('/users', async (req, res) => {
+    const users = await send({ action: 'get-all' });
+    res.json(users);
+})
 
+app.get('/users/:id', async (req, res) => {
+    const user = await send({ action: 'get', id: req.params.id });
+    res.json(user);
+})
+
+app.listen(app_port, () => {
+    console.log(`⚡️ Listening on port ${app_port}`)
+})
