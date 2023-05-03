@@ -15,12 +15,16 @@ export class Cache {
         console.log("⚡️ Connected to redis");
     }
 
-    async get(key: string) {
-        return this.client.get(key);
+    async has(key: string): Promise<boolean> {
+        return await this.client.exists(key) === 1;
+    }
+
+    async get(key: string): Promise<string | null> {
+        return await this.client.get(key);
     }
 
 
-    async getObj(key: string) {
+    async getObj(key: string): Promise<any | null> {
         const value = await this.client.get(key);
 
         if (!value) {
@@ -31,19 +35,19 @@ export class Cache {
     }
     
 
-    async set(key: string, value: string, ttl: number = 600) {
-        return this.client.set(key, value, {
+    async set(key: string, value: string, ttl: number = 600): Promise<string | null> {
+        return await this.client.set(key, value, {
             EX: ttl,
         });
     }
 
-    async setObj(key: string, value: any, ttl: number = 600) {
-        return this.client.set(key, JSON.stringify(value), {
+    async setObj(key: string, value: any, ttl: number = 600): Promise<string | null> {
+        return await this.client.set(key, JSON.stringify(value), {
             EX: ttl,
         });
     }
 
-    async del(key: string) {
-        return this.client.del(key);
+    async del(key: string): Promise<number> {
+        return await this.client.del(key);
     }
 }

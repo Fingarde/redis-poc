@@ -73,7 +73,7 @@ export class Messaging {
     const json = JSON.stringify(
       requestMessage,
     );
-    
+
     this.pub.publish(queue, json);
 
     return await promise;
