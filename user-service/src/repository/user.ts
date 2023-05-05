@@ -11,7 +11,7 @@ async function getUser(id: number): Promise<User | null> {
   try {
     const user = await prisma.user.findFirst({
       where: {
-        id: id,
+        id: Number(id) ,
       }
     })
 

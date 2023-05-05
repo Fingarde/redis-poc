@@ -3,14 +3,14 @@ import dotenv from 'dotenv'
 
 import { Cache } from './framework/cache';
 import { Messaging } from './framework/messaging';
+import { Consumer } from './framework/consumer';
 
 dotenv.config()
 
 const cache = new Cache();
 const messaging = new Messaging();
 
-async function test() { 
-    cache.connect();
+    /*cache.connect();
    console.log(await cache.setObj('test', {
         name: 'test',
     }, 2))
@@ -28,7 +28,13 @@ async function test() {
         action: 'get-all',
     });
 
-    console.log(response);
+    console.log(response);*/
+const consumer = new Consumer(["user"]);
+
+async function test() { 
+
+    await consumer.connect();
+    await consumer.perform();
 }
 
 test().catch(err => console.log(err));

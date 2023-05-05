@@ -3,7 +3,8 @@ import { v4 as uuid } from 'uuid';
 import dotenv from 'dotenv'
 import { RequestMessage, ResponseMessage } from './types/message';
 
-import UserService from './services/user';
+import { Consumer } from './lib/consumer';
+import { GetUserCommand } from './command/get-user';
 
 dotenv.config()
 
@@ -17,48 +18,26 @@ const queue = process.env.QUEUE || 'user';
 
 client.on('error', err => console.log('Redis Client Error', err));
 
+const commands = [
+    new GetUserCommand()
+]
+
+const consumer = new Consumer([queue], clientId);
 
 async function main() {
-    await client.connect();
-    const sub = client.duplicate();
-    await sub.connect();
-
-    console.log('⚡️ Connected to redis');
-    console.log('Listening for queue', queue);
-
-    const listener = async (message: string, channel: string) => {
-        let reqMessage: RequestMessage = JSON.parse(message);
-        const { action, replyTo, correlationId, data } = reqMessage;
-    
-        console.log('Received message', reqMessage);
-    
-        let reply: ResponseMessage = {
-            correlationId,
-        }
-
-        try {
-            switch (action) {
-            case 'get-all':
-                reply.data = await UserService.getAll();
-                break;
-            case 'get':
-                const id = Number(data.id);
+    // Register commands
+    console.debug('Registering commands');
+    commands.forEach(command => { 
+        consumer.register(command);
+        console.debug(`\t - ${command.name()}`);
+    });
 
 
-                reply.data = await UserService.get(id);
-                break;
-            case 'create':
-                reply.data = await UserService.create(data);
-                break;
-        }
-        } catch (err) {
-            reply.error = err;
-        }
-    
-        client.publish(replyTo, JSON.stringify(reply));
-    }
 
-    sub.subscribe(queue, listener);
+
+
+    await consumer.connect();
+    await consumer.perform();
 }
 
 main().catch(err => console.log(err));

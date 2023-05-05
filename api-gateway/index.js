@@ -33,7 +33,9 @@ async function send(data) {
 
     data.replyTo = clientId;
 
-    client.publish('user', JSON.stringify(data));
+    client.rPush('user', JSON.stringify(data));
+
+    console.log('Sending message', data);
 
     const promise = new Promise((resolve) => {
         replies[correlationId] = resolve;
@@ -52,6 +54,7 @@ sub.subscribe(clientId, (message, channel) => {
  
     console.log('Received message', json);
     if (reply) {
+        console.log('Replying to', correlationId);
         reply({ data , error });
     }
 });
@@ -62,21 +65,24 @@ app.get('/users', async (req, res) => {
     const { data: users, error } = await send({ action: 'get-all' });
 
     if (error) {
-        res.status(error.status).json(...error.message);
+        res.status(error.code).json(...error.message);
         return;
     }
     res.json(users);
 })
 
 app.get('/users/:id', async (req, res) => {
-    const { data: user, error } = await send({ action: 'get', data: { id: req.params.id} });
+    console.log('Get user', req.params.id);
+
+    const { data: user, error } = await send({ action: 'GetUser', data: { id: req.params.id} });
 
     if (error) {
-        res.status(error.status).json({message: error.message});
+        res.status(error.code).json({message: error.message});
         return;
     }
 
     res.json(user);
+    return;
 })
 
 
@@ -86,12 +92,19 @@ app.post('/users', async (req, res) => {
     const { data: user, error } = await send({ action: 'create', data: newUserData });
 
     if (error) {
-        res.status(error.status).json({message: error.message});
+        res.status(error.code).json({message: error.message});
         return;
     }
 
     res.json(user);
 })
+
+app.get("/health", async (req, res) => {
+    console.log('Health check');
+    let test =  await send({ action: 'GetUser' });
+    console.log(test);
+    res.send("OK");
+});
 
 app.listen(app_port, () => {
     console.log(`⚡️ Listening on port ${app_port}`)

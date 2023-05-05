@@ -36,73 +36,40 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var client_1 = require("@prisma/client");
-var prisma = new client_1.PrismaClient();
-function getAllUsers() {
-    return __awaiter(this, void 0, void 0, function () {
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, prisma.user.findMany()];
-                case 1: return [2 /*return*/, _a.sent()];
-            }
+exports.GetUserCommand = void 0;
+var user_service_1 = require("../service/user-service");
+var GetUserCommand = /** @class */ (function () {
+    function GetUserCommand() {
+    }
+    GetUserCommand.prototype.perform = function (req) {
+        return __awaiter(this, void 0, void 0, function () {
+            var options, user;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        options = req.data;
+                        return [4 /*yield*/, (0, user_service_1.getUser)(options.id)];
+                    case 1:
+                        user = _a.sent();
+                        if (isError(user)) {
+                            return [2 /*return*/, {
+                                    error: user
+                                }];
+                        }
+                        return [2 /*return*/, {
+                                data: user
+                            }];
+                }
+            });
         });
-    });
+    };
+    GetUserCommand.prototype.name = function () {
+        return GetUserCommand.commandName;
+    };
+    GetUserCommand.commandName = "GetUser";
+    return GetUserCommand;
+}());
+exports.GetUserCommand = GetUserCommand;
+function isError(value) {
+    return value.code !== undefined;
 }
-function getUser(id) {
-    return __awaiter(this, void 0, void 0, function () {
-        var user, err_1;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    _a.trys.push([0, 2, , 3]);
-                    return [4 /*yield*/, prisma.user.findFirst({
-                            where: {
-                                id: Number(id),
-                            }
-                        })];
-                case 1:
-                    user = _a.sent();
-                    return [2 /*return*/, user];
-                case 2:
-                    err_1 = _a.sent();
-                    console.log(err_1);
-                    return [3 /*break*/, 3];
-                case 3: return [2 /*return*/, null];
-            }
-        });
-    });
-}
-function createUser(userCreate) {
-    return __awaiter(this, void 0, void 0, function () {
-        var user;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, prisma.user.create({
-                        data: userCreate,
-                    })];
-                case 1:
-                    user = _a.sent();
-                    return [2 /*return*/, user];
-            }
-        });
-    });
-}
-function alreadyExists(email) {
-    return __awaiter(this, void 0, void 0, function () {
-        var user;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, prisma.user.findFirst({ where: { email: email } })];
-                case 1:
-                    user = _a.sent();
-                    return [2 /*return*/, !!user];
-            }
-        });
-    });
-}
-exports.default = {
-    getAllUsers: getAllUsers,
-    getUser: getUser,
-    createUser: createUser,
-    alreadyExists: alreadyExists,
-};

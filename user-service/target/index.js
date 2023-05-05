@@ -42,7 +42,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var redis_1 = require("redis");
 var uuid_1 = require("uuid");
 var dotenv_1 = __importDefault(require("dotenv"));
-var user_1 = __importDefault(require("./services/user"));
+var consumer_1 = require("./lib/consumer");
+var get_user_1 = require("./command/get-user");
 dotenv_1.default.config();
 var clientId = process.env.CLIENT_ID || (0, uuid_1.v4)();
 var client = (0, redis_1.createClient)({
@@ -51,73 +52,27 @@ var client = (0, redis_1.createClient)({
 });
 var queue = process.env.QUEUE || 'user';
 client.on('error', function (err) { return console.log('Redis Client Error', err); });
+var commands = [
+    new get_user_1.GetUserCommand()
+];
+var consumer = new consumer_1.Consumer([queue], clientId);
 function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var sub, listener;
-        var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, client.connect()];
+                case 0:
+                    // Register commands
+                    console.debug('Registering commands');
+                    commands.forEach(function (command) {
+                        consumer.register(command);
+                        console.debug("\t - ".concat(command.name()));
+                    });
+                    return [4 /*yield*/, consumer.connect()];
                 case 1:
                     _a.sent();
-                    sub = client.duplicate();
-                    return [4 /*yield*/, sub.connect()];
+                    return [4 /*yield*/, consumer.perform()];
                 case 2:
                     _a.sent();
-                    console.log('⚡️ Connected to redis');
-                    console.log('Listening for queue', queue);
-                    listener = function (message, channel) { return __awaiter(_this, void 0, void 0, function () {
-                        var reqMessage, action, replyTo, correlationId, data, reply, _a, _b, id, _c, _d, err_1;
-                        return __generator(this, function (_e) {
-                            switch (_e.label) {
-                                case 0:
-                                    reqMessage = JSON.parse(message);
-                                    action = reqMessage.action, replyTo = reqMessage.replyTo, correlationId = reqMessage.correlationId, data = reqMessage.data;
-                                    console.log('Received message', reqMessage);
-                                    reply = {
-                                        correlationId: correlationId,
-                                    };
-                                    _e.label = 1;
-                                case 1:
-                                    _e.trys.push([1, 9, , 10]);
-                                    _a = action;
-                                    switch (_a) {
-                                        case 'get-all': return [3 /*break*/, 2];
-                                        case 'get': return [3 /*break*/, 4];
-                                        case 'create': return [3 /*break*/, 6];
-                                    }
-                                    return [3 /*break*/, 8];
-                                case 2:
-                                    _b = reply;
-                                    return [4 /*yield*/, user_1.default.getAll()];
-                                case 3:
-                                    _b.data = _e.sent();
-                                    return [3 /*break*/, 8];
-                                case 4:
-                                    id = Number(data.id);
-                                    _c = reply;
-                                    return [4 /*yield*/, user_1.default.get(id)];
-                                case 5:
-                                    _c.data = _e.sent();
-                                    return [3 /*break*/, 8];
-                                case 6:
-                                    _d = reply;
-                                    return [4 /*yield*/, user_1.default.create(data)];
-                                case 7:
-                                    _d.data = _e.sent();
-                                    return [3 /*break*/, 8];
-                                case 8: return [3 /*break*/, 10];
-                                case 9:
-                                    err_1 = _e.sent();
-                                    reply.error = err_1;
-                                    return [3 /*break*/, 10];
-                                case 10:
-                                    client.publish(replyTo, JSON.stringify(reply));
-                                    return [2 /*return*/];
-                            }
-                        });
-                    }); };
-                    sub.subscribe(queue, listener);
                     return [2 /*return*/];
             }
         });
